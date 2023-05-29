@@ -64,7 +64,7 @@ def analyze_audio_files(directory, rename=False):
 
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".mp3") or file.endswith(".wav"): 
+            if file.endswith(".mp3") or file.endswith(".wav") or file.endswith(".flac") : 
                 if file not in out_df['Filepath'].tolist():
                     file_path = os.path.join(root, file)
                     files_to_process.append(file_path)
