@@ -31,6 +31,8 @@ import pandas as pd
 import numpy as np
 import re  # for regular expressions
 import argparse  # for command-line arguments
+import concurrent.futures
+
 
 
 
@@ -100,72 +102,38 @@ def extract_features(file_path):
     Returns:
         dict: A dictionary of features if extraction was successful, None otherwise.
     """
-    try:
-        ## load audio file with librosa
-        y, sr = librosa.load(file_path)
 
-        ## Extracting features
-        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
-        chroma = normalize_chroma(y, sr)
-        #tonnetz = compute_tonnetz(chroma)
-        key = find_key(chroma)
-        spectral_contrast = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr))
-        spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
-
-
-        ## Create a data dictionary
-        data_dict = {"Filepath": file_path, "Dominant Key": key, "Tempo": round(tempo,2), 
-                     "Spectral Contrast": round(spectral_contrast,3), "Spectral Centroid": round(spectral_centroid,3)}
-        # Include the estimations for all keys
-        for k, t in zip(KEYS, np.mean(chroma, axis=1)):
-            data_dict[k] = round(t,3)
-
-        return data_dict
-
-    except Exception as err:
-        print(f"Error occurred for {file_path} : {str(err)}")
-        return None
-    
-def analyze_audio_files(directory, rename):
-    """
-    Analyze audio files in a directory. Extracts audio features using librosa.
-    If the rename flag is True, it renames files based on their features after analysis.
-
-    Args:
-        directory (str): The directory where audio files are located.
-        rename (bool): Flag indicating whether to rename files after analysis.
-
-    Returns:
-        pd.DataFrame: DataFrame containing audio features for each file.
-    """
-    headers = ['Filepath','Dominant Key','Tempo','Spectral Contrast','Spectral Centroid']+ KEYS
-
+    headers = ['Filepath', 'Dominant Key', 'Tempo', 'Spectral Contrast', 'Spectral Centroid'] + KEYS
     try:
         out_df = pd.read_csv('audio_data_v2.csv')
     except FileNotFoundError:
         out_df = pd.DataFrame(columns=headers)
 
+    # List of files to process
+    files_to_process = []
 
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".mp3") or file.endswith(".wav"):
+            if file.endswith(".mp3") or file.endswith(".wav"): 
                 if file not in out_df['Filepath'].tolist():
                     file_path = os.path.join(root, file)
-                    print(f'- Extracting features of: \n {file_path}')
-                    file_data_dict = extract_features(file_path)
+                    files_to_process.append(file_path)
 
-                    if file_data_dict is not None:
-                        print(file_data_dict)
-                        if rename:
-                            # rename file right after extraction of features
-                            new_file_path = rename_file(file_path, file_data_dict)
-                            file_data_dict['Filepath'] = new_file_path
+    # Use ThreadPoolExecutor to parallelize the function execution
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        for file_path, file_data_dict in zip(files_to_process, executor.map(extract_features, files_to_process)):
+            print(f'- Extracting features of: \n {file_path}')
+            if file_data_dict is not None:
+                print(file_data_dict)
 
-                        dict_df = pd.DataFrame(file_data_dict, index=[0])
+                dict_df = pd.DataFrame(file_data_dict, index=[0])
+                out_df = pd.concat([out_df, dict_df], ignore_index=True)
 
-                        out_df = pd.concat([out_df, dict_df], ignore_index=True)
-                        
-                        out_df.to_csv(os.path.join(directory, 'audio_data_v2.csv'), index=False)       
+                if rename:
+                    new_file_path = rename_file(file_path, file_data_dict)
+                    out_df.replace(file_path, new_file_path, inplace=True)
+
+        out_df.to_csv(os.path.join(directory, 'audio_data.csv'), index=False)
     return out_df
 def rename_file(old_filepath, file_data_dict):
     """
