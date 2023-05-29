@@ -70,7 +70,7 @@ def analyze_audio_files(directory, rename=False):
                     files_to_process.append(file_path)
 
     # Use ThreadPoolExecutor to parallelize the function execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         for file_path, file_data_dict in zip(files_to_process, executor.map(extract_features, files_to_process)):
             print(f'- Extracting features of: \n {file_path}')
             if file_data_dict is not None:
@@ -206,7 +206,7 @@ def rename_file(old_filepath, file_data_dict):
             new_filepath = os.path.join(dirname, new_filename)
             os.rename(old_filepath, new_filepath)
 
-            return new_file_path
+            return new_filepath
         return old_filepath
     except Exception as e:
         print(f"Error occurred while renaming file {old_filepath} : {str(e)}")
