@@ -33,9 +33,6 @@ import re  # for regular expressions
 import argparse  # for command-line arguments
 import concurrent.futures
 
-
-
-
 # Keys in music theory (0=C, 1=C#, 2=D, ..., 11=B)
 KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
