@@ -70,7 +70,7 @@ def analyze_audio_files(directory, rename=False):
                     files_to_process.append(file_path)
 
     # Use ThreadPoolExecutor to parallelize the function execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         for file_path, file_data_dict in zip(files_to_process, executor.map(extract_features, files_to_process)):
             print(f'- Extracting features of: \n {file_path}')
             if file_data_dict is not None:
@@ -182,27 +182,35 @@ def rename_file(old_filepath, file_data_dict):
         file_data_dict (dict): The dictionary containing the extracted features.
 
     Returns:
-        str: The new file path after renaming.
+        str: The new (or old if error) path
     """
-    dirname = os.path.dirname(old_filepath)
-    old_filename = os.path.basename(old_filepath)
-    filename_without_ext, file_extension = os.path.splitext(old_filename)
+    try: 
+        dirname = os.path.dirname(old_filepath)
+        old_filename = os.path.basename(old_filepath)
+        filename_without_ext, file_extension = os.path.splitext(old_filename)
 
-    # Use regular expressions to process the filename
-    cleaned_filename = re.sub(r'^[^a-zA-Z]*', '', filename_without_ext)  # Remove any leading non-alpha characters
-    cleaned_filename = re.sub(r'\(.*\)|\[.*\]|www\..*\.com|from YouTube', '', cleaned_filename)  # Remove anything in () or [] or any www.***.com or 'from YouTube'
+        # Check if the filename already contains the pattern "_[{BPM}]_{KEY}_"
+        if not re.search(r"_\[\d+\.\d+\]_[A-G](#|b)?_", filename_without_ext):
+        
+            # Use regular expressions to process the filename
+            cleaned_filename = re.sub(r'^[^a-zA-Z]*', '', filename_without_ext)  # Remove any leading non-alpha characters
+            cleaned_filename = re.sub(r'\(.*\)|\[.*\]|www\..*\.com|from YouTube|original|Original|', '', cleaned_filename)  # Remove anything in () or [] or any www.***.com or 'from YouTube'
 
-    # Remove any sequence that matches the pattern of a YouTube video ID
-    cleaned_filename = re.sub(r'[0-9A-Za-z_-]{11}', '', cleaned_filename)
+            # Remove any sequence that matches the pattern of a YouTube video ID
+            #cleaned_filename = re.sub(r'[0-9A-Za-z_-]{11}', '', cleaned_filename)
 
-    # Construct new filename with BPM and Key
-    new_filename = f"{cleaned_filename} [{file_data_dict['Tempo']}BPM]{file_data_dict['Dominant Key']}{file_extension}"
+            # Construct new filename with BPM and Key
+            new_filename = f"{cleaned_filename}_[{file_data_dict['Tempo']}]_{file_data_dict['Dominant Key']}_{file_extension}"
 
-    # Construct full new filepath and rename the file
-    new_filepath = os.path.join(dirname, new_filename)
-    os.rename(old_filepath, new_filepath)
+            # Construct full new filepath and rename the file
+            new_filepath = os.path.join(dirname, new_filename)
+            os.rename(old_filepath, new_filepath)
 
-    return new_filepath
+            return new_file_path
+        return old_filepath
+    except Exception as e:
+        print(f"Error occurred while renaming file {old_filepath} : {str(e)}")
+        return old_filepath
 
 def save_to_csv(df, directory):
     """
