@@ -155,7 +155,7 @@ def rename_file(old_filepath, file_data_dict):
     cleaned_filename = re.sub(r'[0-9A-Za-z_-]{11}', '', cleaned_filename)
 
     # Construct new filename with BPM and Key
-    new_filename = f"{cleaned_filename} [{file_data_dict['Tempo']} BPM] {file_data_dict['Dominant Key']}{file_extension}"
+    new_filename = f"{cleaned_filename} [{file_data_dict['Tempo']}BPM]{file_data_dict['Dominant Key']}{file_extension}"
 
     # Construct full new filepath and rename the file
     new_filepath = os.path.join(dirname, new_filename)
