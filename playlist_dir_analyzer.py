@@ -36,6 +36,56 @@ import concurrent.futures
 # Keys in music theory (0=C, 1=C#, 2=D, ..., 11=B)
 KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
+def analyze_audio_files(directory, rename=False):
+    """
+    This function walks through a given directory and analyzes each audio file it finds.
+    It extracts musical features from each file, stores them in a DataFrame, and writes the DataFrame to a CSV file.
+
+    If the rename flag is set to True, it also renames the file based on the extracted features.
+
+    Args:
+        directory (str): The directory where audio files are located.
+        rename (bool, optional): If True, the function will rename the audio files based on their features. 
+                                 The renaming format is as follows: 
+                                 "[original filename without any leading numbers or special characters][BPM][Key].extension". 
+                                 Defaults to False.
+
+    Returns:
+        out_df (pd.DataFrame): A DataFrame containing information about each audio file, including its file path and musical features.
+    """
+    headers = ['Filepath', 'Dominant Key', 'Tempo', 'Spectral Contrast', 'Spectral Centroid'] + KEYS
+    try:
+        out_df = pd.read_csv('audio_data_v2.csv')
+    except FileNotFoundError:
+        out_df = pd.DataFrame(columns=headers)
+
+    # List of files to process
+    files_to_process = []
+
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".mp3") or file.endswith(".wav"): 
+                if file not in out_df['Filepath'].tolist():
+                    file_path = os.path.join(root, file)
+                    files_to_process.append(file_path)
+
+    # Use ThreadPoolExecutor to parallelize the function execution
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        for file_path, file_data_dict in zip(files_to_process, executor.map(extract_features, files_to_process)):
+            print(f'- Extracting features of: \n {file_path}')
+            if file_data_dict is not None:
+                print(file_data_dict)
+
+                dict_df = pd.DataFrame(file_data_dict, index=[0])
+                out_df = pd.concat([out_df, dict_df], ignore_index=True)
+
+                if rename:
+                    new_file_path = rename_file(file_path, file_data_dict)
+                    out_df.replace(file_path, new_file_path, inplace=True)
+
+        out_df.to_csv(os.path.join(directory, 'audio_data_v2.csv'), index=False)
+    return out_df
+
 def normalize_chroma(y, sr):
     """
     Normalize the chroma of an audio signal using librosa's chroma_cqt method.
@@ -84,7 +134,6 @@ def find_key(chroma):
     """
     return KEYS[np.argmax(np.mean(chroma, axis=1))]
 
-
 def extract_features(file_path):
     """
     Extract audio features from a file.
@@ -99,39 +148,31 @@ def extract_features(file_path):
     Returns:
         dict: A dictionary of features if extraction was successful, None otherwise.
     """
-
-    headers = ['Filepath', 'Dominant Key', 'Tempo', 'Spectral Contrast', 'Spectral Centroid'] + KEYS
     try:
-        out_df = pd.read_csv('audio_data_v2.csv')
-    except FileNotFoundError:
-        out_df = pd.DataFrame(columns=headers)
+        # load audio file with librosa
+        y, sr = librosa.load(file_path)
 
-    # List of files to process
-    files_to_process = []
+        # Extracting features
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+        chroma = normalize_chroma(y, sr)
+        tonnetz = compute_tonnetz(chroma)
+        key = find_key(chroma)
+        spectral_contrast = np.mean(librosa.feature.spectral_contrast(y=y, sr=sr))
+        spectral_centroid = np.mean(librosa.feature.spectral_centroid(y=y, sr=sr))
 
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".mp3") or file.endswith(".wav"): 
-                if file not in out_df['Filepath'].tolist():
-                    file_path = os.path.join(root, file)
-                    files_to_process.append(file_path)
+        # Create a data dictionary
+        data_dict = {"Filepath": file_path, "Dominant Key": key, "Tempo": round(tempo,2), 
+                     "Spectral Contrast": round(spectral_contrast,3), "Spectral Centroid": round(spectral_centroid,3)}
+        # Include the estimations for all keys
+        for k, t in zip(KEYS, np.mean(chroma, axis=1)):
+            data_dict[k] = round(t,3)
 
-    # Use ThreadPoolExecutor to parallelize the function execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        for file_path, file_data_dict in zip(files_to_process, executor.map(extract_features, files_to_process)):
-            print(f'- Extracting features of: \n {file_path}')
-            if file_data_dict is not None:
-                print(file_data_dict)
+        return data_dict
 
-                dict_df = pd.DataFrame(file_data_dict, index=[0])
-                out_df = pd.concat([out_df, dict_df], ignore_index=True)
+    except Exception as e:
+        print(f"Error occurred for {file_path} : {str(e)}")
+        return None
 
-                if rename:
-                    new_file_path = rename_file(file_path, file_data_dict)
-                    out_df.replace(file_path, new_file_path, inplace=True)
-
-        out_df.to_csv(os.path.join(directory, 'audio_data.csv'), index=False)
-    return out_df
 def rename_file(old_filepath, file_data_dict):
     """
     Rename the audio file based on the extracted features.
