@@ -5,7 +5,7 @@ This script processes audio files in a specified directory, extracts various fea
 Librosa is a Python library for audio and music analysis. It provides the building blocks necessary to create music information retrieval systems. It was developed by Brian McFee while at the Music and Audio Research Lab (MARL) of New York University and is now maintained by a team of developers. It is a popular library used widely in both academia and industry.
 
 ### Installation
-You need Python 3.6 or later to run this script. The required Python packages can be installed via pip or Anaconda.
+First clone this repository. You need Python 3.6 or later to run this script. The required Python packages can be installed via pip or Anaconda.
 
 With pip, you can install the requirements with:
 
