@@ -23,7 +23,7 @@ conda env create -f environment.yml
 You can run the script from the command line with:
 
 ```
-python script.py [directory] [-r/--rename]
+python playlist_dir_analyzer.py [directory] [-r/--rename]
 ```
 
 #### Arguments
@@ -39,7 +39,7 @@ Help
 You can display a help message with:
 
 ```
-python script.py --help
+python playlist_dir_analyzer.py --help
 ```
 This will display a help message showing the usage of the script and descriptions of the arguments.
 
