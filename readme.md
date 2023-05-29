@@ -23,12 +23,13 @@ conda env create -f environment.yml
 You can run the script from the command line with:
 
 ```
-python script.py [directory] [-r/--rename]
+python playlist_dir_analyzer.py [directory] [-r/--rename]
 ```
 
 #### Arguments
-directory (optional): The directory where the audio files are located. If not provided, the script uses the current directory.
--r or --rename (optional): If this option is specified, the script renames files after analysis according to the file's tempo and dominant key.
+- directory (optional): The directory where the audio files are located. If not provided, the script uses the current directory.
+
+- -r or --rename (optional): If this option is specified, the script renames files after analysis according to the file's tempo and dominant key.
 Output
 The script creates a CSV file named audio_data.csv in the same directory, with each row representing a song and each column representing a feature.
 
@@ -38,7 +39,7 @@ Help
 You can display a help message with:
 
 ```
-python script.py --help
+python playlist_dir_analyzer.py --help
 ```
 This will display a help message showing the usage of the script and descriptions of the arguments.
 
