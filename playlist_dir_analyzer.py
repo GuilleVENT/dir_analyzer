@@ -6,7 +6,7 @@ extracts various features from each audio file using librosa, and stores these f
 If the rename option is specified, it also renames each file after analysis according to the file's tempo 
 and dominant key. 
 
-Usage: python script.py [directory] [-r/--rename]
+Usage: python playlist_dir_analyzer.py [directory] [-r/--rename]
 
 Arguments:
     directory: Optional. The directory where audio files are located. If not provided, the script uses the current directory.
